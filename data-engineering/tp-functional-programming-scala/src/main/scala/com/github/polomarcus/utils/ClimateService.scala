@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.Logger
 import com.github.polomarcus.model.CO2Record
 
 import scala.util.matching.Regex
-
 object ClimateService {
   val logger = Logger(ClimateService.getClass)
 
@@ -16,7 +15,11 @@ object ClimateService {
    * @param description "my awesome sentence contains a key word like climate change"
    * @return Boolean True
    */
-  def isClimateRelated(description: String): Boolean = ???
+  def isClimateRelated(description: String): Boolean = {
+    val climateWords = List("climate", "global warming", "IPCC", "carbon", "emissions")
+    val regex = climateWords.mkString("(", "|", ")")
+    description.matches(s".*\\b$regex\\b.*")
+  }
 
   /**
    * parse a list of raw data and transport it with type into a list of CO2Record
@@ -26,9 +29,19 @@ object ClimateService {
    * you can access to Tuple with myTuple._1, myTuple._2, myTuple._3
    */
   def parseRawData(list: List[(Int, Int, Double)]) : List[Option[CO2Record]] = {
-    list.map { record => ??? }
-    ???
+    // Use map to apply a transformation to each element in the input list
+    list.map { record =>
+      // Use CO2Record's isValidPpmValue method to check if the ppm is valid
+      if (CO2Record(record._1, record._2, record._3).isValidPpmValue(record._3)) {
+        // If the ppm is valid, create a new CO2Record object wrapped in Some
+        Some(CO2Record(record._1, record._2, record._3))
+      } else {
+        // If the ppm is invalid, return None
+        None
+      }
+    }
   }
+
 
   /**
    * remove all values from december (12) of every year
@@ -36,15 +49,27 @@ object ClimateService {
    * @param list
    * @return a list
    */
-  def filterDecemberData(list: List[Option[CO2Record]]) : List[CO2Record] = ???
-
+  def filterDecemberData(list: List[Option[CO2Record]]) : List[CO2Record] = {
+    list.flatten.filterNot(_.month == 12)
+  }
 
   /**
    * **Tips**: look at the read me to find some tips for this function
    */
-  def getMinMax(list: List[CO2Record]) : (Double, Double) = ???
+  def getMinMax(list: List[CO2Record]) : (Double, Double) = {
+    val ppmValues = list.map(_.ppm)
+    (ppmValues.min, ppmValues.max)
+  }
 
-  def getMinMaxByYear(list: List[CO2Record], year: Int) : (Double, Double) = ???
+  def getMinMaxByYear(list: List[CO2Record], year: Int) : (Double, Double) = {
+    val Record_year = list.filter(_.year == year)
+    getMinMax(Record_year)
+  }
+
+  def getDifference(list: List[CO2Record]): Double = {
+    val (min, max) = getMinMax(list)
+    max - min
+  }
 
   /**
    * use this function side src/main/scala/com/polomarcus/main/Main (with sbt run)
@@ -56,8 +81,10 @@ object ClimateService {
    */
   def showCO2Data(list: List[Option[CO2Record]]): Unit = {
     logger.info("Call ClimateService.filterDecemberData here")
-
+    val filteredList = filterDecemberData(list)
     logger.info("Call record.show function here inside a map function")
+    val stringsList = filteredList.map(_.show())
+    stringsList.foreach(logger.info)
   }
 
   /**
