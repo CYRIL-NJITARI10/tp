@@ -45,9 +45,14 @@ object Main {
     // Tips: use a groupBy
     val count_is_climateR = NewsService.getNumberOfNews(filteredNewsAboutClimate)
     logger.info(s"We have ${count_is_climateR} news in our dataset talking about climate change")
+    logger.info(s"We have ${count - count_is_climateR} news in our dataset not talking about climate change")
 
     // Use SQL to query a "news" table - look at : https://spark.apache.org/docs/latest/sql-getting-started.html#running-sql-queries-programmatically
-      //.createOrReplaceTempView("news")
+    // .createOrReplaceTempView("news")
+
+    newsDatasets.createOrReplaceTempView("news")
+    val sqlDF = spark.sql("SELECT * FROM news WHERE containsWordGlobalWarming = true")
+    sqlDF .show(10)
 
     // Use strongly typed dataset to be sure to not introduce a typo to your SQL Query
     // Tips : https://stackoverflow.com/a/46514327/3535853
@@ -56,6 +61,13 @@ object Main {
     // Save it as a columnar format with Parquet with a partition by date and media
     // Learn about Parquet : https://spark.apache.org/docs/3.2.1/sql-data-sources-parquet.html
     // Learn about partition : https://spark.apache.org/docs/3.2.1/sql-data-sources-load-save-functions.html#bucketing-sorting-and-partitioning
+
+    filteredNewsAboutClimate
+      .write
+      .partitionBy("date", "media")
+      .parquet("./filtered-news.parquet")
+
+    logger.info("Filtered news saved as Parquet with partitioning by date and media")
 
     logger.info("Stopping the app")
     System.exit(0)
